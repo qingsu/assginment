@@ -1,0 +1,318 @@
+commit 500e36e47146e8547f1de94903e75577c0bb5aba
+Author: Zhuang Liang <zhuang@uber.com>
+Date:   Mon Jan 11 09:04:46 2016 -0800
+
+    add chat history; add message ts
+
+diff --git a/client/app.jsx b/client/app.jsx
+index ecb8609..2dedfd0 100644
+--- a/client/app.jsx
++++ b/client/app.jsx
+@@ -19,7 +19,7 @@ var UsersList = React.createClass({
+ 							);
+ 						})
+ 					}
+-				</ul>				
++				</ul>
+ 			</div>
+ 		);
+ 	}
+@@ -29,8 +29,9 @@ var Message = React.createClass({
+ 	render() {
+ 		return (
+ 			<div className="message">
+-				<strong>{this.props.user} :</strong> 
+-				<span>{this.props.text}</span>		
++				<span>{[this.props.ts]} </span>
++				<strong>{this.props.user} :</strong>
++				<span>{this.props.text}</span>
+ 			</div>
+ 		);
+ 	}
+@@ -46,12 +47,13 @@ var MessageList = React.createClass({
+ 						return (
+ 							<Message
+ 								key={i}
++								ts={message.ts}
+ 								user={message.user}
+-								text={message.text} 
++								text={message.text}
+ 							/>
+ 						);
+ 					})
+-				} 
++				}
+ 			</div>
+ 		);
+ 	}
+@@ -69,7 +71,7 @@ var MessageForm = React.createClass({
+ 			user : this.props.user,
+ 			text : this.state.text
+ 		}
+-		this.props.onMessageSubmit(message);	
++		this.props.onMessageSubmit(message);
+ 		this.setState({ text: '' });
+ 	},
+ 
+@@ -104,7 +106,7 @@ var ChangeNameForm = React.createClass({
+ 	handleSubmit(e) {
+ 		e.preventDefault();
+ 		var newName = this.state.newName;
+-		this.props.onChangeName(newName);	
++		this.props.onChangeName(newName);
+ 		this.setState({ newName: '' });
+ 	},
+ 
+@@ -115,9 +117,9 @@ var ChangeNameForm = React.createClass({
+ 				<form onSubmit={this.handleSubmit}>
+ 					<input
+ 						onChange={this.onKey}
+-						value={this.state.newName} 
++						value={this.state.newName}
+ 					/>
+-				</form>	
++				</form>
+ 			</div>
+ 		);
+ 	}
+@@ -138,8 +140,9 @@ var ChatApp = React.createClass({
+ 	},
+ 
+ 	_initialize(data) {
+-		var {users, name} = data;
+-		this.setState({users, user: name});
++		var {users, name, messages} = data;
++		messages = messages || [];
++		this.setState({users, user: name, messages});
+ 	},
+ 
+ 	_messageRecieve(message) {
+diff --git a/msgDAO.js b/msgDAO.js
+new file mode 100644
+index 0000000..865a1d1
+--- /dev/null
++++ b/msgDAO.js
+@@ -0,0 +1,20 @@
++'use strict';
++
++var sqlite3 = require('sqlite3').verbose();
++var db = new sqlite3.Database('msg.db');
++
++module.exports = {
++    save: function save(sender, msg, cb) {
++        var ts = new Date().getTime();
++        db.serialize(function saveMsg() {
++            db.run('CREATE TABLE if not exists msgs (ts INT, user TEXT, text TEXT)');
++            db.run('INSERT INTO msgs VALUES (?, ?, ?)', [ts, sender, msg]);
++        }, cb);
++    },
++    load: function load(numMsg, cb) {
++        db.serialize(function saveMsg() {
++            db.all('SELECT * FROM msgs ORDER BY ts DESC LIMIT 10', cb);
++        });
++    }
++};
++
+diff --git a/package.json b/package.json
+index 3811312..d6511ef 100644
+--- a/package.json
++++ b/package.json
+@@ -9,7 +9,8 @@
+   "dependencies": {
+     "express": "^4.13.1",
+     "react": "^0.13.3",
+-    "socket.io": "^1.3.5"
++    "socket.io": "^1.3.5",
++    "sqlite3": "^3.1.1"
+   },
+   "devDependencies": {
+     "babelify": "^6.1.3",
+diff --git a/public/js/app.js b/public/js/app.js
+index feb2168..72b98d2 100644
+--- a/public/js/app.js
++++ b/public/js/app.js
+@@ -40,6 +40,12 @@ var Message = React.createClass({
+ 			'div',
+ 			{ className: 'message' },
+ 			React.createElement(
++				'span',
++				null,
++				[this.props.ts],
++				' '
++			),
++			React.createElement(
+ 				'strong',
+ 				null,
+ 				this.props.user,
+@@ -69,6 +75,7 @@ var MessageList = React.createClass({
+ 			this.props.messages.map(function (message, i) {
+ 				return React.createElement(Message, {
+ 					key: i,
++					ts: message.ts,
+ 					user: message.user,
+ 					text: message.text
+ 				});
+@@ -176,8 +183,10 @@ var ChatApp = React.createClass({
+ 	_initialize: function _initialize(data) {
+ 		var users = data.users;
+ 		var name = data.name;
++		var messages = data.messages;
+ 
+-		this.setState({ users: users, user: name });
++		messages = messages || [];
++		this.setState({ users: users, user: name, messages: messages });
+ 	},
+ 
+ 	_messageRecieve: function _messageRecieve(message) {
+@@ -195,7 +204,7 @@ var ChatApp = React.createClass({
+ 
+ 		users.push(name);
+ 		messages.push({
+-			user: 'APLICATION BOT',
++			user: 'APPLICATION BOT',
+ 			text: name + ' Joined'
+ 		});
+ 		this.setState({ users: users, messages: messages });
+@@ -210,7 +219,7 @@ var ChatApp = React.createClass({
+ 		var index = users.indexOf(name);
+ 		users.splice(index, 1);
+ 		messages.push({
+-			user: 'APLICATION BOT',
++			user: 'APPLICATION BOT',
+ 			text: name + ' Left'
+ 		});
+ 		this.setState({ users: users, messages: messages });
+@@ -226,7 +235,7 @@ var ChatApp = React.createClass({
+ 		var index = users.indexOf(oldName);
+ 		users.splice(index, 1, newName);
+ 		messages.push({
+-			user: 'APLICATION BOT',
++			user: 'APPLICATION BOT',
+ 			text: 'Change Name : ' + oldName + ' ==> ' + newName
+ 		});
+ 		this.setState({ users: users, messages: messages });
+@@ -312,7 +321,9 @@ function drainQueue() {
+         currentQueue = queue;
+         queue = [];
+         while (++queueIndex < len) {
+-            currentQueue[queueIndex].run();
++            if (currentQueue) {
++                currentQueue[queueIndex].run();
++            }
+         }
+         queueIndex = -1;
+         len = queue.length;
+@@ -364,7 +375,6 @@ process.binding = function (name) {
+     throw new Error('process.binding is not supported');
+ };
+ 
+-// TODO(shtylman)
+ process.cwd = function () { return '/' };
+ process.chdir = function (dir) {
+     throw new Error('process.chdir is not supported');
+diff --git a/routes/socket.js b/routes/socket.js
+index b43e839..e4d2212 100644
+--- a/routes/socket.js
++++ b/routes/socket.js
+@@ -1,3 +1,5 @@
++var msgDao = require('../msgDAO');
++
+ // Keep track of which names are used so that there are no duplicates
+ var userNames = (function () {
+   var names = {};
+@@ -50,51 +52,56 @@ var userNames = (function () {
+ 
+ // export function for listening to the socket
+ module.exports = function (socket) {
+-  var name = userNames.getGuestName();
+-
+-  // send the new user their name and a list of users
+-  socket.emit('init', {
+-    name: name,
+-    users: userNames.get()
+-  });
+-
+-  // notify other clients that a new user has joined
+-  socket.broadcast.emit('user:join', {
+-    name: name
+-  });
++  msgDao.load(10, function (err, messages) {
++    // console.log(messages);
++    var name = userNames.getGuestName();
++
++    // send the new user their name and a list of users
++    socket.emit('init', {
++      name: name,
++      users: userNames.get(),
++      messages: messages
++    });
+ 
+-  // broadcast a user's message to other users
+-  socket.on('send:message', function (data) {
+-    socket.broadcast.emit('send:message', {
+-      user: name,
+-      text: data.text
++    // notify other clients that a new user has joined
++    socket.broadcast.emit('user:join', {
++      name: name
+     });
+-  });
+ 
+-  // validate a user's name change, and broadcast it on success
+-  socket.on('change:name', function (data, fn) {
+-    if (userNames.claim(data.name)) {
+-      var oldName = name;
+-      userNames.free(oldName);
+-
+-      name = data.name;
+-      
+-      socket.broadcast.emit('change:name', {
+-        oldName: oldName,
+-        newName: name
++    // broadcast a user's message to other users
++    socket.on('send:message', function (data) {
++      msgDao.save(name, data.text);
++      socket.broadcast.emit('send:message', {
++        user: name,
++        text: data.text
+       });
++    });
+ 
+-      fn(true);
+-    } else {
+-      fn(false);
+-    }
+-  });
++    // validate a user's name change, and broadcast it on success
++    socket.on('change:name', function (data, fn) {
++      if (userNames.claim(data.name)) {
++        var oldName = name;
++        userNames.free(oldName);
+ 
+-  // clean up when a user leaves, and broadcast it to other users
+-  socket.on('disconnect', function () {
+-    socket.broadcast.emit('user:left', {
+-      name: name
++        name = data.name;
++
++        socket.broadcast.emit('change:name', {
++          oldName: oldName,
++          newName: name
++        });
++
++        fn(true);
++      } else {
++        fn(false);
++      }
++    });
++
++    // clean up when a user leaves, and broadcast it to other users
++    socket.on('disconnect', function () {
++      socket.broadcast.emit('user:left', {
++        name: name
++      });
++      userNames.free(name);
+     });
+-    userNames.free(name);
+   });
+ };

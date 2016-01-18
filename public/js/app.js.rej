@@ -1,0 +1,86 @@
+***************
+*** 195,201 ****
+  
+  		users.push(name);
+  		messages.push({
+- 			user: 'APLICATION BOT',
+  			text: name + ' Joined'
+  		});
+  		this.setState({ users: users, messages: messages });
+--- 204,210 ----
+  
+  		users.push(name);
+  		messages.push({
++ 			user: 'APPLICATION BOT',
+  			text: name + ' Joined'
+  		});
+  		this.setState({ users: users, messages: messages });
+***************
+*** 210,216 ****
+  		var index = users.indexOf(name);
+  		users.splice(index, 1);
+  		messages.push({
+- 			user: 'APLICATION BOT',
+  			text: name + ' Left'
+  		});
+  		this.setState({ users: users, messages: messages });
+--- 219,225 ----
+  		var index = users.indexOf(name);
+  		users.splice(index, 1);
+  		messages.push({
++ 			user: 'APPLICATION BOT',
+  			text: name + ' Left'
+  		});
+  		this.setState({ users: users, messages: messages });
+***************
+*** 226,232 ****
+  		var index = users.indexOf(oldName);
+  		users.splice(index, 1, newName);
+  		messages.push({
+- 			user: 'APLICATION BOT',
+  			text: 'Change Name : ' + oldName + ' ==> ' + newName
+  		});
+  		this.setState({ users: users, messages: messages });
+--- 235,241 ----
+  		var index = users.indexOf(oldName);
+  		users.splice(index, 1, newName);
+  		messages.push({
++ 			user: 'APPLICATION BOT',
+  			text: 'Change Name : ' + oldName + ' ==> ' + newName
+  		});
+  		this.setState({ users: users, messages: messages });
+***************
+*** 312,318 ****
+          currentQueue = queue;
+          queue = [];
+          while (++queueIndex < len) {
+-             currentQueue[queueIndex].run();
+          }
+          queueIndex = -1;
+          len = queue.length;
+--- 321,329 ----
+          currentQueue = queue;
+          queue = [];
+          while (++queueIndex < len) {
++             if (currentQueue) {
++                 currentQueue[queueIndex].run();
++             }
+          }
+          queueIndex = -1;
+          len = queue.length;
+***************
+*** 364,370 ****
+      throw new Error('process.binding is not supported');
+  };
+  
+- // TODO(shtylman)
+  process.cwd = function () { return '/' };
+  process.chdir = function (dir) {
+      throw new Error('process.chdir is not supported');
+--- 375,380 ----
+      throw new Error('process.binding is not supported');
+  };
+  
+  process.cwd = function () { return '/' };
+  process.chdir = function (dir) {
+      throw new Error('process.chdir is not supported');

@@ -1,0 +1,43 @@
+body{
+	width: 600px;
+	margin: 0 auto;
+	border: 5px solid rgba(200, 200, 200, 1.0);
+}
+
+#header {
+	margin: 0px;
+	padding: 5px;
+	background-color: rgba(66, 165, 240, 1.0);
+	color: rgba(255, 255, 255, 1.0);
+}
+
+.users{
+	margin: 5px;
+}
+.message_form,
+.change_name_form{
+	padding: 1em;
+}
+
+.messages {
+	width: 500px;
+	margin: 1em;
+	padding: 1em;
+	background-color: rgba(245, 245, 245, 1.0);
+}
+.message-time {
+	float: right;
+	color: rgba(137, 137, 137, 1.0);
+}
+
+.message-user {
+	font-size: 20px;
+	color: rgba(137, 137, 137, 1.0);
+	display: block;
+	font-weight: bold;
+	margin: 5px 0px 5px 0px;
+}
+
+.message-content {
+	color: rgba(137, 137, 137, 1.0);
+}
